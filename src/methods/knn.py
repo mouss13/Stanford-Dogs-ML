@@ -29,7 +29,7 @@ class KNN(object):
 
         ##
         ###
-        #### YOUR CODE HERE!
+        #### YOUR CODE HERE! 
         ###
         ##
         return pred_labels
