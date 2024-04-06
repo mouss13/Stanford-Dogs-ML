@@ -56,13 +56,13 @@ def main(args):
     if not args.test:
         ### WRITE YOUR CODE HERE
 
-        # Splitting the data into 80% training and 20% validation
-        t_set_ratio = 0.8 # adjust training set ratio
+        # Split 80% training, 20% validation  #### tweak for optimization (?)
+        t_set_ratio = 0.8 
         np.random.seed(0)
         rinds = np.random.permutation(xtrain.shape[0]) # randomize indices
         n_train = int(t_set_ratio * xtrain.shape[0]) # size of training set
-        xval = xtrain[rinds[n_train:]] # validation set
-        xtrain, ytrain = xtrain[rinds[:n_train]], ytrain[rinds[:n_train]] 
+        xval = xtrain[rinds[n_train:]] # validation set (20%)
+        xtrain, ytrain = xtrain[rinds[:n_train]], ytrain[rinds[:n_train]] # nouvelle training set devient 80% de l'ancienne (randomisé)
 
         cval = ctrain[rinds[n_train:]]
         ctrain = ctrain[rinds[:n_train]]
@@ -116,9 +116,6 @@ def main(args):
 
         print(f"\nTrain loss = {training_loss:.3f}% || Test loss = {loss:.3f}%")
 
-        plot_predictions_vs_actual(training_preds, ctrain, "Training Predictions vs Actual")
-        plot_predictions_vs_actual(test_preds, ctest, "Test Predictions vs Actual")
-
     elif args.task == "breed_identifying":
 
         # Fit (:=train) the method on the training data for classification task
@@ -138,13 +135,10 @@ def main(args):
     else:
         raise Exception("Invalid choice of task! Only support center_locating and breed_identifying!")
     
-    plt.figure(figsize=(10, 5))
-    plt.bar(['Train Accuracy', 'Train Macro F1', 'Test Accuracy', 'Test Macro F1'], [acc, macrof1, acc, macrof1])
-    plt.title("Performance Metrics for Breed Identifying Task")
-    plt.ylabel("Score")
-    plt.show()
-
     ### WRITE YOUR CODE HERE if you want to add other outputs, visualization, etc.
+
+    plot_predictions_vs_actual(training_preds, ctrain, "Training Predictions vs Actual")
+    plot_predictions_vs_actual(test_preds, ctest, "Test Predictions vs Actual")
 
 
 if __name__ == '__main__':
