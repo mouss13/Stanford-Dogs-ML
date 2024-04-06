@@ -24,28 +24,18 @@ class LinearRegression(object):
             Returns:
                 pred_labels (np.array): target of shape (N,regression_target_size)
         """
-        ##
-        ###
-        #### YOUR CODE HERE!
-        ###
-        ##
 
-        return pred_regression_targets
+        N, D = training_data.shape # N = 2938, D = 2048
+        print("N, D:", N, D)
+        #Formule du cours
+        A = training_data.T @ training_data + self.lmda * np.eye(D)
+        print("A shape:", A.shape)
+        B = training_data.T @ training_labels
+        print("B shape:", B.shape)
+        self.weights = np.linalg.solve(A, B) # Resoulution pour w optimal
+        return training_data @ self.weights
+    
+    def predict(self, test_data): 
+        return test_data @ self.weights
 
-
-def predict(self, test_data):
-        """
-            Runs prediction on the test data.
-            
-            Arguments:
-                test_data (np.array): test data of shape (N,D)
-            Returns:
-                test_labels (np.array): labels of shape (N,regression_target_size)
-        """
-        ##
-        ###
-        #### YOUR CODE HERE!
-        ###
-        ##
-
-        return pred_regression_targets
+    
