@@ -100,7 +100,10 @@ def main(args):
         print("============ Center Locating Task ============")
         print("ctrain shape:", ctrain.shape)
         preds_train = method_obj.fit(xtrain, ctrain)
+        if preds_train.shape != ctrain.shape:  # Ensure preds_train has the correct shape
+            raise ValueError("Shape mismatch: preds_train shape does not match ctrain shape.")
         print("preds_train shape:", preds_train.shape)
+
         
         # Perform inference for training and test data
         training_preds = method_obj.predict(xtrain)
@@ -114,7 +117,7 @@ def main(args):
         training_loss = mse_fn(training_preds, ctrain)
         loss = mse_fn(test_preds, ctest)
 
-        print(f"\nTrain loss = {training_loss:.3f}% || Test loss = {loss:.3f}%")
+        print(f"\nTrain loss = {training_loss:.10f}% || Test loss = {loss:.10f}%")
 
     elif args.task == "breed_identifying":
 
