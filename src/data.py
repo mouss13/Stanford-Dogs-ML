@@ -27,7 +27,6 @@ def load_data(directory, skip=1, partition_rate=0.9):
         train_centers (array): centers of the dog of the train set, of shape (N,2)
         test_centers (array): centers of the dog of the test set, of shape (N',2)
     """
-
     with open(os.path.join(directory,'annotation.pkl'), 'rb') as f:
         annos = pkl.load(f)
     labels = annos['labels']

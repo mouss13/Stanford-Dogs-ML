@@ -26,10 +26,13 @@ class KNN(object):
             Returns:
                 pred_labels (np.array): labels of shape (N,)
         """
-
+        
         self.training_data = training_data
         self.training_labels = training_labels
-        return training_labels
+        pred_labels = training_labels
+
+        #just return training labels, because KNN does not train!
+        return pred_labels
 
     def predict(self, test_data):
         """
@@ -43,28 +46,18 @@ class KNN(object):
         test_labels = []
         for test_point in test_data:
             # Compute distances between test_point and all training points
-            distances = [np.linalg.norm(test_point - point) for point in self.training_data]
-            # Get indices of k nearest neighbors
+            distances = np.linalg.norm(test_point - self.training_data, axis=1)  
+            # indides of the k smallest distances  
             k_indices = np.argsort(distances)[:self.k]
 
             if self.task_kind == "breed_identifying":
-                # For classification, vote the most frequent label
-                label_count = {}
-                for idx in k_indices:
-                    label = self.training_labels[idx]
-                    if isinstance(label, np.ndarray) and label.size == 1:
-                        label = label[0]
-                    elif isinstance(label, np.ndarray):
-                        raise ValueError("Labels must be scalar or 1D array with one element for classification")
-                    label_count[label] = label_count.get(label, 0) + 1
-                most_frequent_label = max(label_count, key=label_count.get)
-                test_labels.append(most_frequent_label)
+                #voting for classification task
+                labels, counts = np.unique(self.training_labels[k_indices], return_counts=True)
+                test_labels.append(labels[np.argmax(counts)])
+                
             else:
-                # For regression, calculate the mean of the neighbors' values
-                neighbor_values = [self.training_labels[idx] for idx in k_indices]
-                neighbor_values_array = np.array(neighbor_values)
-                # Calculate the mean across the rows (axis=0), not across the columns
-                average_value = np.mean(neighbor_values_array, axis=0)
-                test_labels.append(average_value)
-
+                #calculate mean for regression task
+                mean_values = np.mean(self.training_labels[k_indices], axis=0)
+                test_labels.append(mean_values)
+                
         return np.array(test_labels)

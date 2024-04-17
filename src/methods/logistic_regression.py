@@ -19,7 +19,9 @@ class LogisticRegression(object):
         """
         self.lr = lr
         self.max_iters = max_iters
+        self.weights = None
 
+        
 
     def fit(self, training_data, training_labels):
         """
@@ -32,10 +34,24 @@ class LogisticRegression(object):
             pred_labels (array): target of shape (N,)
         """
         ##
-        ###
-        #### WRITE YOUR CODE HERE!
-        ###
-        ##
+
+        nb_features = training_data.shape[1]
+        nb_classes = get_n_classes(training_labels)
+        self.weights = np.random.normal(0,0.01,(nb_features, nb_classes))
+
+   
+        y_onehot = label_to_onehot(training_labels, nb_classes)
+        
+        for _ in range(self.max_iters):
+            #softmax
+            a = np.dot(training_data, self.weights)
+            probs = np.exp(a) / np.sum(np.exp(a), axis=1, keepdims=True)
+            gradient = np.dot(training_data.T, (probs - y_onehot))
+
+            self.weights -= self.lr * gradient
+        pred_labels = self.predict(training_data)
+        # Return predicted labels
+       
         return pred_labels
 
     def predict(self, test_data):
@@ -48,8 +64,10 @@ class LogisticRegression(object):
             pred_labels (array): labels of shape (N,)
         """
         ##
-        ###
-        #### WRITE YOUR CODE HERE!
-        ###
+        if self.weights is None:
+            raise ValueError("Model not trained yet")
+        a = np.dot(test_data, self.weights)
+        probs = np.exp(a) / np.sum(np.exp(a), axis=1, keepdims=True)
+        pred_labels = np.argmax(probs, axis=1)
         ##
         return pred_labels

@@ -14,7 +14,7 @@ class LinearRegression(object):
             and call set_arguments function of this class.
         """
         self.lmda = lmda
-
+    
     def fit(self, training_data, training_labels):
         """
             Trains the model, returns predicted labels for training data.
@@ -24,14 +24,11 @@ class LinearRegression(object):
             Returns:
                 pred_labels (np.array): target of shape (N,regression_target_size)
         """
-
+        
         N, D = training_data.shape # N = 2938, D = 2048
-        print("N, D:", N, D)
         #Formule du cours
-        A = training_data.T @ training_data + self.lmda * np.eye(D)
-        print("A shape:", A.shape)
-        B = training_data.T @ training_labels
-        print("B shape:", B.shape)
+        A = training_data.T @ training_data + self.lmda * np.eye(D) # A taille 6x6
+        B = training_data.T @ training_labels # B taille 6x2
         self.weights = np.linalg.solve(A, B) # Resoulution pour w optimal
         return training_data @ self.weights
     
