@@ -12,28 +12,34 @@ import os
 
 np.random.seed(100)
 
-def plot_results(predictions, actuals, title, xlabel, ylabel):
-    plt.figure(figsize=(10, 6))
-    plt.scatter(actuals, predictions, alpha=0.5, label='Predicted vs Actual')
-    plt.title(title)
-    plt.xlabel(xlabel)
-    plt.ylabel(ylabel)
-    plt.legend()
-    plt.grid(True)
-    plt.show()
 
-def plot_hyperparameter_tuning(hyperparam_values, train_metrics, val_metrics, title, xlabel, ylabel, labels):
-    plt.figure(figsize=(12, 6))
-    
-    for metric, label in zip([train_metrics, val_metrics], labels):
-        plt.plot(hyperparam_values, metric, label=label)
-    
-    plt.title(title)
-    plt.xlabel(xlabel)
-    plt.ylabel(ylabel)
-    plt.legend()
-    plt.grid(True)
-    plt.show()
+def cross_val_score(X, y, num_folds, k):
+    fold_size = len(X) // num_folds
+    accuracies = []
+    f1_scores = []
+    mses = []
+
+    for fold in range(num_folds):
+        start, end = fold * fold_size, (fold + 1) * fold_size
+        X_val_fold = X[start:end]
+        y_val_fold = y[start:end]
+        X_train_fold = np.concatenate((X[:start], X[end:]))
+        y_train_fold = np.concatenate((y[:start], y[end:]))
+
+        model = KNN(k=k)
+        model.fit(X_train_fold, y_train_fold)
+        predictions = model.predict(X_val_fold)
+
+        acc = accuracy_fn(predictions, y_val_fold)
+        f1 = macrof1_fn(predictions, y_val_fold)
+        mse = mse_fn(predictions, y_val_fold)
+
+        accuracies.append(acc)
+        f1_scores.append(f1)
+        mses.append(mse)
+
+    return np.mean(accuracies), np.mean(f1_scores), np.mean(mses)
+
 
 def main(args):
     """
@@ -67,7 +73,7 @@ def main(args):
 
     # Make a validation set (it can overwrite xtest, ytest)
     if not args.test:
-        ### WRITE YOUR CODE HERE
+
         validation_size = int(0.2 * len(xtrain)) # 20% of the training data
         indices = np.random.permutation(len(xtrain))
         train_indices, val_indices = indices[validation_size:], indices[:validation_size]
@@ -97,8 +103,8 @@ def main(args):
     elif args.method == "logistic_regression":
         method_obj = LogisticRegression(lr=args.lr, max_iters=args.max_iters)
         if args.graph:
-            #lr_values = [1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1, 5]  # Example range for learning rates
-            lr_values = np.linspace(1e-5, 0.2, 10)
+            #lr_values = [1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1, 5]  
+            lr_values = np.logspace(-6, 0, 20) 
             val_acc = []
             val_f1 = []
             
@@ -108,21 +114,25 @@ def main(args):
                 val_pred = method_obj.predict(xval)
                 val_acc.append(accuracy_fn(val_pred, yval))
                 val_f1.append(macrof1_fn(val_pred, yval))
-            plot_hyperparameter_tuning(lr_values, val_acc, val_f1,
-                                    "Logistic Regression Performance Over Learning Rate", 
-                                    "Learning Rate", "Accuracy/F1", 
-                                    ["Validation Accuracy",
-                                        "Validation F1"])
-                                    
-
+            
+            plt.figure(figsize=(12, 6))
+            plt.semilogx(lr_values, val_acc, label='Validation Accuracy')
+            plt.semilogx(lr_values, val_f1, label='Validation F1 Score')
+            plt.title("Logistic Regression Performance Over Learning Rate")
+            plt.xlabel("Learning Rate")
+            plt.ylabel("Performance Metrics")
+            plt.legend()
+            plt.grid(True)
+            plt.show()
+                                     
 
     elif args.method == "linear_regression":
         method_obj = LinearRegression(lmda=args.lmda)
         
         if args.graph:
-            #lambda_values = [1, 2, 3, 5, 8, 13, 21, 34]
-            #lambda_values = np.logspace(0, 2, base=100, num=10)
-            lambda_values = [1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 610, 987, 1597] # fibonacci (j'ai essayé d'autres séquences et c'est moins beau lol)
+
+            lambda_values = np.logspace(-3, 3, 50)
+            #lambda_values = [1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 610, 987, 1597]
             train_mse = []
             val_mse = []
             
@@ -130,40 +140,72 @@ def main(args):
 
             for lmda in lambda_values:
                 method_obj = LinearRegression(lmda=lmda)
-                # Fit the model on training data
                 method_obj.fit(xtrain, ytrain)
-                # Predict on training and validation data
                 train_pred = method_obj.predict(xtrain)
                 val_pred = method_obj.predict(xval)
-                
-                # Calculate and append the MSE for train and validation sets
                 train_mse.append(mse_fn(train_pred, ytrain))
                 val_mse.append(mse_fn(val_pred, yval))
             
-            # Plot the MSE against lambda values for both training and validation sets
-            plot_hyperparameter_tuning(lambda_values, train_mse, val_mse, "Linear Regression Performance Over Lambda",
-                                    "Lambda", "MSE", ["Train MSE", "Validation MSE"])
-    
+            plt.figure(figsize=(12, 6))
+            plt.semilogx(lambda_values, train_mse, label='Training MSE')
+            plt.semilogx(lambda_values, val_mse, label='Validation MSE')
+            plt.title("Linear Regression Performance Over Lambda")
+            plt.xlabel("Lambda (Regularization parameter)")
+            plt.ylabel("Mean Squared Error")
+            plt.legend()
+            plt.grid(True)
+            plt.show()
+
+        
     elif args.method == "knn":
-        method_obj = KNN(k=args.K)
-        #k_values = np.logspace(0, 2, base=10, num=10)
-        k_values = [0, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144]
-        val_acc = []
-        val_f1 = []
+        k_values = list(range(1, 101))
+        acc_results, f1_results, mse_results = [], [], []
+        best_k_acc = best_k_f1 = best_k_mse = 1
+        best_score_acc = best_score_f1 = best_score_mse = float('-inf')
+        num_folds = 5
 
+        for k in k_values:
+            method_obj = KNN(k=k)
+            acc, f1, mse = cross_val_score(xtrain, ytrain, num_folds, k)
+            acc_results.append(acc)
+            f1_results.append(f1)
+            mse_results.append(mse)
+
+            if acc > best_score_acc:
+                best_score_acc = acc
+                best_k_acc = k
+
+            if f1 > best_score_f1:
+                best_score_f1 = f1
+                best_k_f1 = k
+
+            if mse < best_score_mse or best_score_mse == float('-inf'):
+                best_score_mse = mse
+                best_k_mse = k
+        
+        #printing the results for optimal K for different metrics
+        print("\n========== K-Fold Cross Validation Results =========\n")
+        print("\nBest k for accuracy ({}-Fold CV): {}\nBest CV accuracy: {:.5f}%\n".format(num_folds, best_k_acc, best_score_acc))
+        print("Best k for F1 ({}-Fold CV): {}\nBest CV F1: {:.3f}\n".format(num_folds, best_k_f1, best_score_f1))
+        print("Best k for MSE ({}-Fold CV): {}\nBest CV MSE: {:.3f}\n".format(num_folds, best_k_mse, best_score_mse))
+        print("\n========================================================\n")
+
+        #plot the performance metrics over hyperparameters
         if args.graph:
-            for k in k_values:
-                method_obj = KNN(k=k)
-                method_obj.fit(xtrain, ytrain)
-                val_pred = method_obj.predict(xval)
-
-                val_acc.append(mse_fn(val_pred, yval))
-                val_f1.append(macrof1_fn(val_pred, yval))
-
-            plot_hyperparameter_tuning(k_values, val_acc, val_f1, "KNN Validation Scores over K", "K", "Score", ["Test error", "Validation F1"])
-    
+            plt.figure(figsize=(12, 6))
+            plt.plot(k_values, acc_results, label='Accuracy')
+            plt.plot(k_values, f1_results, label='F1 Score')
+            plt.plot(k_values, mse_results, label='MSE')
+            plt.title("KNN Performance Variation with K")
+            plt.xlabel("Number of Neighbors (K)")
+            plt.ylabel("Performance Metrics")
+            plt.legend()
+            plt.grid(True)
+            plt.show()
+        
+        
     else:
-        raise ValueError("Invalid method!")
+        raise ValueError("Unrecognized model!")
 
     ## 4. Train and evaluate the method
 
@@ -185,8 +227,6 @@ def main(args):
             val_loss = mse_fn(val_pred, cval)
             print(f"Validation loss = {val_loss:.3f}")
         
-        #plot_results(preds, ctest, "Linear Regression Predictions vs Actual", "Actual Values", "Predicted Values")
-
     
     elif args.task == "breed_identifying":
         
@@ -200,6 +240,7 @@ def main(args):
         acc = accuracy_fn(preds_train, ytrain)
         macrof1 = macrof1_fn(preds_train, ytrain)
         print(f"\nTrain set: accuracy = {acc:.3f}% - F1-score = {macrof1:.6f}")
+        print(f"MSE = {mse_fn(preds_train, ytrain):.6f}")
 
         acc = accuracy_fn(preds, ytest)
         macrof1 = macrof1_fn(preds, ytest)
@@ -209,8 +250,9 @@ def main(args):
             val_pred = method_obj.predict(xval)
             val_acc = accuracy_fn(val_pred, yval)
             print(f"Validation set accuracy = {val_acc:.3f}%")
-        
-        #plot_results(preds, ytest, "Logistic Regression Predictions vs Actual", "Actual Labels", "Predicted Labels")
+            print(f"MSE = {mse_fn(preds_train, ytrain):.6f}")
+
+
     else:
         raise Exception("Invalid choice of task! Only support center_locating and breed_identifying!")
 
