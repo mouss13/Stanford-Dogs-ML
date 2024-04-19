@@ -14,6 +14,20 @@ np.random.seed(100)
 
 
 def cross_val_score(X, y, num_folds, k):
+    """
+    Perform k-fold cross validation on the given data and labels.
+
+    Arguments:
+
+        X (np.array): training data of shape (N,D)
+        y (np.array): regression target of shape (N,)
+        num_folds (int): number of folds for cross validation
+        k (int): number of neighbors for KNN
+
+    Returns:
+
+        val_accuracies (float): average validation accuracy over all folds
+    """
     fold_size = len(X) // num_folds
     val_accuracies = []
     f1_scores = []
@@ -57,7 +71,7 @@ def main(args):
     
     ##EXTRACTED FEATURES DATASET
     if args.data_type == "features":
-        feature_data = np.load('../features.npz',allow_pickle=True)
+        feature_data = np.load('features.npz',allow_pickle=True)
         xtrain, xtest, ytrain, ytest, ctrain, ctest = feature_data['xtrain'],feature_data['xtest'],\
                                                       feature_data['ytrain'],feature_data['ytest'],\
                                                       feature_data['ctrain'],feature_data['ctest']
@@ -157,12 +171,9 @@ def main(args):
         if args.graph:
 
             lambda_values = np.logspace(-3, 3, 50)
-            #lambda_values = [1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 610, 987, 1597]
             train_mse = []
             val_mse = []
             
-            # Split your dataset into training and validation here, if not already split
-
             for lmda in lambda_values:
                 method_obj = LinearRegression(lmda=lmda)
                 method_obj.fit(xtrain, ytrain)
@@ -196,7 +207,6 @@ def main(args):
             print("\nPlotting KNN performance over K for {} values of K and {}-folds...".format(len(k_values), num_folds))
             print("/!\\ Disclaimer: This may take 2-3 minutes for 100 values of K and 5-fold\n")
 
-
             for k in k_values:
                 method_obj = KNN(k=k)
                 acc, f1, val_mse, train_mse = cross_val_score(xtrain, ytrain, num_folds, k)
@@ -224,7 +234,7 @@ def main(args):
             print("Best k for MSE ({}-Fold CV): {}\nBest CV MSE: {:.3f}\n".format(num_folds, best_k_mse, best_score_mse))
             print("\n========================================================\n")
             
-            #plot Accuracies 
+            #plot Accuracy
             plt.figure(figsize=(12, 6))
             plt.plot(k_values, acc_results, label='Validation Accuracy')
             plt.title("KNN Performance Variation with K")
@@ -234,7 +244,7 @@ def main(args):
             plt.grid(True)
             plt.show()
 
-            #plot MSE
+            #plot MSE for validation set and training set
             plt.figure(figsize=(12, 6))
             plt.plot(k_values, val_mse_results, label='Validation MSE')
             plt.plot(k_values, train_mse_results, label='Training MSE')
@@ -244,7 +254,6 @@ def main(args):
             plt.legend()
             plt.grid(True)
             plt.show()
-        
         
     else:
         raise ValueError("Unrecognized model!")

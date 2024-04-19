@@ -36,7 +36,7 @@ class NoHidePrints:
 
 
 class TestProject(unittest.TestCase):
-
+    
     @staticmethod
     def title(msg):
         print(f"\n==============\n> {msg} ...")
