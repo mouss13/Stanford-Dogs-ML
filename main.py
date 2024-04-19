@@ -12,10 +12,52 @@ import os
 
 np.random.seed(100)
 
+def k_fold_logReg(X, y, num_folds, lr_values, iter_values):
+    fold_size = len(X) // num_folds
+    best_acc = -1
+    best_f1 = -1
+    best_lr = None
+    results = []
+    
+    for lr in lr_values:
+        for iters in iter_values:
+            acc_scores = []
+            f1_scores = []
+            for fold in range(num_folds):
+                start, end = fold * fold_size, (fold + 1) * fold_size
+                X_train = np.concatenate((X[:start], X[end:]))
+                y_train = np.concatenate((y[:start], y[end:]))
+                X_val = X[start:end]
+                y_val = y[start:end]
+
+                model = LogisticRegression(lr=lr, max_iters=iters)
+                model.fit(X_train, y_train)
+                predictions = model.predict(X_val)
+                acc = accuracy_fn(predictions, y_val)
+                f1 = macrof1_fn(predictions, y_val)
+
+                acc_scores.append(acc)
+                f1_scores.append(f1)
+
+            avg_acc = np.mean(acc_scores)
+            avg_f1 = np.mean(f1_scores)
+            results.append((lr, iters, avg_acc, avg_f1))
+
+            if avg_acc > best_acc:
+                best_acc = avg_acc
+                best_lr = lr
+                best_iters_acc = iters
+
+            if avg_f1 > best_f1:
+                best_f1 = avg_f1
+                best_iters_f1 = iters
+
+    return results, best_lr, best_iters_acc, best_f1, best_iters_f1
+
 
 def cross_val_score(X, y, num_folds, k):
     """
-    Perform k-fold cross validation on the given data and labels.
+    Performs k-fold cross validation on the given data and labels.
 
     Arguments:
 
@@ -28,6 +70,7 @@ def cross_val_score(X, y, num_folds, k):
 
         val_accuracies (float): average validation accuracy over all folds
     """
+    
     fold_size = len(X) // num_folds
     val_accuracies = []
     f1_scores = []
@@ -114,62 +157,57 @@ def main(args):
     if args.method == "nn":
         raise NotImplementedError("This will be useful for MS2.") # for MS2
     
+    
     if args.method == "dummy_classifier":
         method_obj = DummyClassifier(arg1=1, arg2=2)
 
+
     elif args.method == "logistic_regression":
         method_obj = LogisticRegression(lr=args.lr, max_iters=args.max_iters)
-
+        
         if args.graph:
-            lr_values = np.logspace(-6, 0, 20)
-            val_acc = []
-            val_f1 = []
-            best_lr_acc = -1
-            best_lr_f1 = -1
-            best_lr_for_acc = None  # Initialize best learning rates for each metric
-            best_lr_for_f1 = None
+            #"""
+            lr_values = np.logspace(-6, 0, 20)  # Learning rate values
+            iter_values = [10, 50, 100, 500, 1000]  # Max iteration values
 
-            for lr in lr_values:
-                # Create a new LogisticRegression object for each learning rate
-                method_obj = LogisticRegression(lr=lr, max_iters=args.max_iters)
-                method_obj.fit(xtrain, ytrain)
-                val_pred = method_obj.predict(xval)
-                current_acc = accuracy_fn(val_pred, yval)
-                current_f1 = macrof1_fn(val_pred, yval)
-                val_acc.append(current_acc)
-                val_f1.append(current_f1)
+            print("\nPerforming K-Fold Cross Validation for Logistic Regression with {} values of learning rate and {} values of max iterations...".format(len(lr_values), len(iter_values)))
+            results, best_lr, best_iters_acc, best_f1, best_iters_f1 = k_fold_logReg(xtrain, ytrain, args.folds, lr_values, iter_values)
 
-                # Update the best learning rate and value for accuracy
-                if current_acc > best_lr_acc:
-                    best_lr_acc = current_acc
-                    best_lr_for_acc = lr
-
-                # Update the best learning rate and value for F1
-                if current_f1 > best_lr_f1:
-                    best_lr_f1 = current_f1
-                    best_lr_for_f1 = lr
+            # Extract results for plotting
+            acc_by_lr = [result[2] for result in results if result[1] == best_iters_acc]
+            acc_by_iter = [result[2] for result in results if result[0] == best_lr]
 
             print("\n========== Logistic Regression Results =========\n")
-            print("\nBest learning rate for accuracy: {}\nBest Validation Accuracy: {:.5f}%\n".format(best_lr_for_acc, best_lr_acc))
-            print("Best learning rate for F1: {}\nBest Validation F1: {:.3f}\n".format(best_lr_for_f1, best_lr_f1))
+            print(f"Optimal learning rate for accuracy: {best_lr} with max_iters: {best_iters_acc}")
+            print(f"Optimal learning rate for F1: {best_lr} with max_iters: {best_iters_f1}")
             print("\n========================================================\n")
 
+            # Plotting for learning rates
             plt.figure(figsize=(12, 6))
-            plt.semilogx(lr_values, val_acc, label='Validation Accuracy')
-            plt.semilogx(lr_values, val_f1, label='Validation F1 Score')
+            plt.semilogx(lr_values, acc_by_lr, label='Validation Accuracy')
             plt.title("Logistic Regression Performance Over Learning Rate")
             plt.xlabel("Learning Rate")
             plt.ylabel("Performance Metrics")
             plt.legend()
-            plt.grid(False)
+            plt.grid(True)
             plt.show()
-                                     
 
+            # Plotting for iterations
+            plt.figure(figsize=(12, 6))
+            plt.plot(iter_values, acc_by_iter, label='Validation Accuracy')
+            plt.title("Logistic Regression Performance Over Max Iterations")
+            plt.xlabel("Max Iterations")
+            plt.ylabel("Performance Metrics")
+            plt.legend()
+            plt.grid(True)
+            plt.show()
+            #"""
+            
     elif args.method == "linear_regression":
         method_obj = LinearRegression(lmda=args.lmda)
-        
+    
         if args.graph:
-
+            
             lambda_values = np.logspace(-3, 3, 50)
             train_mse = []
             val_mse = []
@@ -192,7 +230,7 @@ def main(args):
             plt.grid(False)
             plt.show()
 
-        
+
     elif args.method == "knn":
 
         method_obj = KNN(k=args.K)
@@ -256,7 +294,7 @@ def main(args):
             plt.show()
         
     else:
-        raise ValueError("Unrecognized model!")
+        raise ValueError("Invalid model! Only support linear_regression, logistic_regression, knn")
 
     ## 4. Train and evaluate the method
 
@@ -304,14 +342,13 @@ def main(args):
     else:
         raise Exception("Invalid choice of task! Only support center_locating and breed_identifying!")
 
-    ### WRITE YOUR CODE HERE if you want to add other outputs, visualization, etc.
-
 
 if __name__ == '__main__':
     # Definition of the arguments that can be given through the command line (terminal).
     # If an argument is not given, it will take its default value as defined below.
     parser = argparse.ArgumentParser()
-    parser.add_argument('--graph', type=int, default=0, help="Toggle to visualize performance metrics over hyperparameters")
+    parser.add_argument('--folds', type=int, default=5, help="Number of folds for cross-validation") # Added argument for K-fold cross-validation
+    parser.add_argument('--graph', type=int, default=0, help="Toggle to visualize performance metrics over hyperparameters") # Added argument for plotting and finding optimal hyperparameters
     parser.add_argument('--task', default="center_locating", type=str, help="center_locating / breed_identifying")
     parser.add_argument('--method', default="dummy_classifier", type=str, help="dummy_classifier / knn / linear_regression/ logistic_regression / nn (MS2)")
     parser.add_argument('--data_path', default="data", type=str, help="path to your dataset")
@@ -319,6 +356,7 @@ if __name__ == '__main__':
     parser.add_argument('--lmda', type=float, default=10, help="lambda of linear/ridge regression")
     parser.add_argument('--K', type=int, default=1, help="number of neighboring datapoints used for knn")
     parser.add_argument('--lr', type=float, default=0.00297635144, help="learning rate for methods with learning rate")
+    # better accuracy lr : 0.0006951927961775605, better max_iters = 1000
     parser.add_argument('--max_iters', type=int, default=100, help="max iters for methods which are iterative")
     parser.add_argument('--test', action="store_true", help="train on whole training data and evaluate on the test data, otherwise use a validation set")
 

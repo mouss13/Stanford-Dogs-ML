@@ -31,7 +31,7 @@ class KNN(object):
         self.training_labels = training_labels
         pred_labels = training_labels
 
-        #just return training labels, because KNN does not train!
+        #just return training labels, as KNN does not train
         return pred_labels
 
     def predict(self, test_data):
@@ -45,18 +45,18 @@ class KNN(object):
         """
         test_labels = []
         for test_point in test_data:
-            # Compute distances between test_point and all training points
+            # compute distances between test_point and all training points
             distances = np.linalg.norm(test_point - self.training_data, axis=1)  
             # indides of the k smallest distances  
             k_indices = np.argsort(distances)[:self.k]
 
             if self.task_kind == "breed_identifying":
-                #voting for classification task
+                #classification task
                 labels, counts = np.unique(self.training_labels[k_indices], return_counts=True)
                 test_labels.append(labels[np.argmax(counts)])
                 
             else:
-                #calculate mean for regression task
+                #regression task (calculate mean)
                 mean_values = np.mean(self.training_labels[k_indices], axis=0)
                 test_labels.append(mean_values)
                 

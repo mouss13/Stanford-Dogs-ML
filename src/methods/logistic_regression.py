@@ -38,12 +38,10 @@ class LogisticRegression(object):
         nb_features = training_data.shape[1]
         nb_classes = get_n_classes(training_labels)
         self.weights = np.random.normal(0,0.01,(nb_features, nb_classes))
-
-   
         y_onehot = label_to_onehot(training_labels, nb_classes)
         
         for _ in range(self.max_iters):
-            #softmax
+            #softmax function
             a = np.dot(training_data, self.weights)
             probs = np.exp(a) / np.sum(np.exp(a), axis=1, keepdims=True)
             gradient = np.dot(training_data.T, (probs - y_onehot))
