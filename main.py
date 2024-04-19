@@ -166,7 +166,7 @@ def main(args):
         method_obj = LogisticRegression(lr=args.lr, max_iters=args.max_iters)
         
         if args.graph:
-            #"""
+            
             lr_values = np.logspace(-6, 0, 20)  # Learning rate values
             iter_values = [10, 50, 100, 500, 1000]  # Max iteration values
 
@@ -201,7 +201,7 @@ def main(args):
             plt.legend()
             plt.grid(True)
             plt.show()
-            #"""
+            
             
     elif args.method == "linear_regression":
         method_obj = LinearRegression(lmda=args.lmda)
@@ -233,21 +233,20 @@ def main(args):
 
     elif args.method == "knn":
 
-        method_obj = KNN(k=args.K)
+        method_obj = KNN(k=args.K, task_kind=args.task)
 
         if args.graph:
             k_values = list(range(1, 101)) # adjust to 21 if computation is too long 
             acc_results, f1_results, val_mse_results, train_mse_results = [], [], [], []
             best_k_acc = best_k_f1 = best_k_mse = 1
             best_score_acc = best_score_f1 = best_score_mse = float('-inf')
-            num_folds = 5 # lower if computation is too long 
 
-            print("\nPlotting KNN performance over K for {} values of K and {}-folds...".format(len(k_values), num_folds))
+            print("\nPlotting KNN performance over K for {} values of K and {}-folds...".format(len(k_values), args.folds))
             print("/!\\ Disclaimer: This may take 2-3 minutes for 100 values of K and 5-fold\n")
 
             for k in k_values:
                 method_obj = KNN(k=k)
-                acc, f1, val_mse, train_mse = cross_val_score(xtrain, ytrain, num_folds, k)
+                acc, f1, val_mse, train_mse = cross_val_score(xtrain, ytrain, args.folds, k)
                 acc_results.append(acc)
                 f1_results.append(f1)
                 val_mse_results.append(val_mse)
@@ -267,9 +266,9 @@ def main(args):
             
             #printing the results for optimal K for different metrics
             print("\n========== K-Fold Cross Validation Results =========\n")
-            print("\nBest k for accuracy ({}-Fold CV): {}\nBest CV accuracy: {:.5f}%\n".format(num_folds, best_k_acc, best_score_acc))
-            print("Best k for F1 ({}-Fold CV): {}\nBest CV F1: {:.3f}\n".format(num_folds, best_k_f1, best_score_f1))
-            print("Best k for MSE ({}-Fold CV): {}\nBest CV MSE: {:.3f}\n".format(num_folds, best_k_mse, best_score_mse))
+            print("\nBest k for accuracy ({}-Fold CV): {}\nBest CV accuracy: {:.5f}%\n".format(args.folds, best_k_acc, best_score_acc))
+            print("Best k for F1 ({}-Fold CV): {}\nBest CV F1: {:.3f}\n".format(args.folds, best_k_f1, best_score_f1))
+            print("Best k for MSE ({}-Fold CV): {}\nBest CV MSE: {:.3f}\n".format(args.folds, best_k_mse, best_score_mse))
             print("\n========================================================\n")
             
             #plot Accuracy

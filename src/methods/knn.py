@@ -5,12 +5,11 @@ class KNN(object):
         kNN classifier object.
     """
 
-    def __init__(self, k=1, task_kind = "center_locating"):
+    def __init__(self, k=1):
         """
             Call set_arguments function of this class.
         """
         self.k = k
-        self.task_kind =task_kind
 
     def fit(self, training_data, training_labels):
         """
