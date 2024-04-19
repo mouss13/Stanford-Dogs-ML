@@ -15,10 +15,11 @@ np.random.seed(100)
 
 def cross_val_score(X, y, num_folds, k):
     fold_size = len(X) // num_folds
-    accuracies = []
+    val_accuracies = []
     f1_scores = []
-    mses = []
-
+    val_mses = []
+    train_mses = []
+    
     for fold in range(num_folds):
         start, end = fold * fold_size, (fold + 1) * fold_size
         X_val_fold = X[start:end]
@@ -33,12 +34,14 @@ def cross_val_score(X, y, num_folds, k):
         acc = accuracy_fn(predictions, y_val_fold)
         f1 = macrof1_fn(predictions, y_val_fold)
         mse = mse_fn(predictions, y_val_fold)
+        train_mse = mse_fn(model.predict(X_train_fold), y_train_fold)
 
-        accuracies.append(acc)
+        val_accuracies.append(acc)
         f1_scores.append(f1)
-        mses.append(mse)
+        val_mses.append(mse)
+        train_mses.append(train_mse)
 
-    return np.mean(accuracies), np.mean(f1_scores), np.mean(mses)
+    return np.mean(val_accuracies), np.mean(f1_scores), np.mean(val_mses), np.mean(train_mses)
 
 
 def main(args):
@@ -51,7 +54,7 @@ def main(args):
                           of this file). Their value can be accessed as "args.argument".
     """
     ## 1. First, we load our data and flatten the images into vectors
-
+    
     ##EXTRACTED FEATURES DATASET
     if args.data_type == "features":
         feature_data = np.load('../features.npz',allow_pickle=True)
@@ -102,19 +105,41 @@ def main(args):
 
     elif args.method == "logistic_regression":
         method_obj = LogisticRegression(lr=args.lr, max_iters=args.max_iters)
+
         if args.graph:
-            #lr_values = [1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1, 5]  
-            lr_values = np.logspace(-6, 0, 20) 
+            lr_values = np.logspace(-6, 0, 20)
             val_acc = []
             val_f1 = []
-            
+            best_lr_acc = -1
+            best_lr_f1 = -1
+            best_lr_for_acc = None  # Initialize best learning rates for each metric
+            best_lr_for_f1 = None
+
             for lr in lr_values:
+                # Create a new LogisticRegression object for each learning rate
                 method_obj = LogisticRegression(lr=lr, max_iters=args.max_iters)
                 method_obj.fit(xtrain, ytrain)
                 val_pred = method_obj.predict(xval)
-                val_acc.append(accuracy_fn(val_pred, yval))
-                val_f1.append(macrof1_fn(val_pred, yval))
-            
+                current_acc = accuracy_fn(val_pred, yval)
+                current_f1 = macrof1_fn(val_pred, yval)
+                val_acc.append(current_acc)
+                val_f1.append(current_f1)
+
+                # Update the best learning rate and value for accuracy
+                if current_acc > best_lr_acc:
+                    best_lr_acc = current_acc
+                    best_lr_for_acc = lr
+
+                # Update the best learning rate and value for F1
+                if current_f1 > best_lr_f1:
+                    best_lr_f1 = current_f1
+                    best_lr_for_f1 = lr
+
+            print("\n========== Logistic Regression Results =========\n")
+            print("\nBest learning rate for accuracy: {}\nBest Validation Accuracy: {:.5f}%\n".format(best_lr_for_acc, best_lr_acc))
+            print("Best learning rate for F1: {}\nBest Validation F1: {:.3f}\n".format(best_lr_for_f1, best_lr_f1))
+            print("\n========================================================\n")
+
             plt.figure(figsize=(12, 6))
             plt.semilogx(lr_values, val_acc, label='Validation Accuracy')
             plt.semilogx(lr_values, val_f1, label='Validation F1 Score')
@@ -122,7 +147,7 @@ def main(args):
             plt.xlabel("Learning Rate")
             plt.ylabel("Performance Metrics")
             plt.legend()
-            plt.grid(True)
+            plt.grid(False)
             plt.show()
                                      
 
@@ -153,52 +178,69 @@ def main(args):
             plt.xlabel("Lambda (Regularization parameter)")
             plt.ylabel("Mean Squared Error")
             plt.legend()
-            plt.grid(True)
+            plt.grid(False)
             plt.show()
 
         
     elif args.method == "knn":
-        k_values = list(range(1, 101))
-        acc_results, f1_results, mse_results = [], [], []
-        best_k_acc = best_k_f1 = best_k_mse = 1
-        best_score_acc = best_score_f1 = best_score_mse = float('-inf')
-        num_folds = 5
 
-        for k in k_values:
-            method_obj = KNN(k=k)
-            acc, f1, mse = cross_val_score(xtrain, ytrain, num_folds, k)
-            acc_results.append(acc)
-            f1_results.append(f1)
-            mse_results.append(mse)
+        method_obj = KNN(k=args.K)
 
-            if acc > best_score_acc:
-                best_score_acc = acc
-                best_k_acc = k
-
-            if f1 > best_score_f1:
-                best_score_f1 = f1
-                best_k_f1 = k
-
-            if mse < best_score_mse or best_score_mse == float('-inf'):
-                best_score_mse = mse
-                best_k_mse = k
-        
-        #printing the results for optimal K for different metrics
-        print("\n========== K-Fold Cross Validation Results =========\n")
-        print("\nBest k for accuracy ({}-Fold CV): {}\nBest CV accuracy: {:.5f}%\n".format(num_folds, best_k_acc, best_score_acc))
-        print("Best k for F1 ({}-Fold CV): {}\nBest CV F1: {:.3f}\n".format(num_folds, best_k_f1, best_score_f1))
-        print("Best k for MSE ({}-Fold CV): {}\nBest CV MSE: {:.3f}\n".format(num_folds, best_k_mse, best_score_mse))
-        print("\n========================================================\n")
-
-        #plot the performance metrics over hyperparameters
         if args.graph:
+            k_values = list(range(1, 101)) # adjust to 21 if computation is too long 
+            acc_results, f1_results, val_mse_results, train_mse_results = [], [], [], []
+            best_k_acc = best_k_f1 = best_k_mse = 1
+            best_score_acc = best_score_f1 = best_score_mse = float('-inf')
+            num_folds = 5 # lower if computation is too long 
+
+            print("\nPlotting KNN performance over K for {} values of K and {}-folds...".format(len(k_values), num_folds))
+            print("/!\\ Disclaimer: This may take 2-3 minutes for 100 values of K and 5-fold\n")
+
+
+            for k in k_values:
+                method_obj = KNN(k=k)
+                acc, f1, val_mse, train_mse = cross_val_score(xtrain, ytrain, num_folds, k)
+                acc_results.append(acc)
+                f1_results.append(f1)
+                val_mse_results.append(val_mse)
+                train_mse_results.append(train_mse)
+
+                if acc > best_score_acc:
+                    best_score_acc = acc
+                    best_k_acc = k
+
+                if f1 > best_score_f1:
+                    best_score_f1 = f1
+                    best_k_f1 = k
+
+                if val_mse < best_score_mse or best_score_mse == float('-inf'):
+                    best_score_mse = val_mse
+                    best_k_mse = k
+            
+            #printing the results for optimal K for different metrics
+            print("\n========== K-Fold Cross Validation Results =========\n")
+            print("\nBest k for accuracy ({}-Fold CV): {}\nBest CV accuracy: {:.5f}%\n".format(num_folds, best_k_acc, best_score_acc))
+            print("Best k for F1 ({}-Fold CV): {}\nBest CV F1: {:.3f}\n".format(num_folds, best_k_f1, best_score_f1))
+            print("Best k for MSE ({}-Fold CV): {}\nBest CV MSE: {:.3f}\n".format(num_folds, best_k_mse, best_score_mse))
+            print("\n========================================================\n")
+            
+            #plot Accuracies 
             plt.figure(figsize=(12, 6))
-            plt.plot(k_values, acc_results, label='Accuracy')
-            plt.plot(k_values, f1_results, label='F1 Score')
-            plt.plot(k_values, mse_results, label='MSE')
+            plt.plot(k_values, acc_results, label='Validation Accuracy')
             plt.title("KNN Performance Variation with K")
             plt.xlabel("Number of Neighbors (K)")
             plt.ylabel("Performance Metrics")
+            plt.legend()
+            plt.grid(True)
+            plt.show()
+
+            #plot MSE
+            plt.figure(figsize=(12, 6))
+            plt.plot(k_values, val_mse_results, label='Validation MSE')
+            plt.plot(k_values, train_mse_results, label='Training MSE')
+            plt.title("KNN Performance Variation with K")
+            plt.xlabel("Number of Neighbors (K)")
+            plt.ylabel("Mean Squared Error")
             plt.legend()
             plt.grid(True)
             plt.show()
@@ -220,12 +262,12 @@ def main(args):
         ## Report results: performance on train and valid/test sets
         train_loss = mse_fn(train_pred, ctrain)
         loss = mse_fn(preds, ctest)
-        print(f"\nTrain loss = {train_loss:.3f}% - Test loss = {loss:.3f}")
+        print(f"\nTrain loss = {train_loss:.4f}% - Test loss = {loss:.4f}")
 
-        if not args.test:
+        if not args.graph and not args.test:
             val_pred = method_obj.predict(xval)
             val_loss = mse_fn(val_pred, cval)
-            print(f"Validation loss = {val_loss:.3f}")
+            print(f"Validation loss = {val_loss:.4f}")
         
     
     elif args.task == "breed_identifying":
@@ -240,7 +282,6 @@ def main(args):
         acc = accuracy_fn(preds_train, ytrain)
         macrof1 = macrof1_fn(preds_train, ytrain)
         print(f"\nTrain set: accuracy = {acc:.3f}% - F1-score = {macrof1:.6f}")
-        print(f"MSE = {mse_fn(preds_train, ytrain):.6f}")
 
         acc = accuracy_fn(preds, ytest)
         macrof1 = macrof1_fn(preds, ytest)
@@ -250,8 +291,6 @@ def main(args):
             val_pred = method_obj.predict(xval)
             val_acc = accuracy_fn(val_pred, yval)
             print(f"Validation set accuracy = {val_acc:.3f}%")
-            print(f"MSE = {mse_fn(preds_train, ytrain):.6f}")
-
 
     else:
         raise Exception("Invalid choice of task! Only support center_locating and breed_identifying!")
@@ -270,7 +309,7 @@ if __name__ == '__main__':
     parser.add_argument('--data_type', default="features", type=str, help="features/original(MS2)")
     parser.add_argument('--lmda', type=float, default=10, help="lambda of linear/ridge regression")
     parser.add_argument('--K', type=int, default=1, help="number of neighboring datapoints used for knn")
-    parser.add_argument('--lr', type=float, default=0.0671, help="learning rate for methods with learning rate")
+    parser.add_argument('--lr', type=float, default=0.00297635144, help="learning rate for methods with learning rate")
     parser.add_argument('--max_iters', type=int, default=100, help="max iters for methods which are iterative")
     parser.add_argument('--test', action="store_true", help="train on whole training data and evaluate on the test data, otherwise use a validation set")
 
