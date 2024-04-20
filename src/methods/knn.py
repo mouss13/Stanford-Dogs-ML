@@ -4,12 +4,13 @@ class KNN(object):
     """
         kNN classifier object.
     """
-
-    def __init__(self, k=1):
+    
+    def __init__(self, k=1, task_kind = "classification"):
         """
             Call set_arguments function of this class.
         """
         self.k = k
+        self.task_kind = task_kind
 
     def fit(self, training_data, training_labels):
         """
@@ -44,19 +45,19 @@ class KNN(object):
         """
         test_labels = []
         for test_point in test_data:
-            # compute distances between test_point and all training points
+            #compute distances between test_point and all training points
             distances = np.linalg.norm(test_point - self.training_data, axis=1)  
-            # indides of the k smallest distances  
+            #indides of the k smallest distances  
             k_indices = np.argsort(distances)[:self.k]
 
-            if self.task_kind == "breed_identifying":
-                #classification task
+            if self.task_kind == "classification":
                 labels, counts = np.unique(self.training_labels[k_indices], return_counts=True)
                 test_labels.append(labels[np.argmax(counts)])
                 
-            else:
-                #regression task (calculate mean)
+            elif self.task_kind == "regression":
                 mean_values = np.mean(self.training_labels[k_indices], axis=0)
                 test_labels.append(mean_values)
-                
+            else:
+                pass
+
         return np.array(test_labels)

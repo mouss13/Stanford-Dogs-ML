@@ -22,7 +22,7 @@ class LogisticRegression(object):
         self.task_kind = task_kind
 
         
-
+        
     def fit(self, training_data, training_labels):
         """
         Trains the model, returns predicted labels for training data.
