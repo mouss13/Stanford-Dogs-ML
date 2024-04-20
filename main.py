@@ -200,10 +200,8 @@ def main(args):
     elif args.method == "knn":
         if(args.task == "center_locating"):
             method_obj = KNN(k=args.K, task_kind="regression")
-            #method_obj = KNN(k=10, task_kind="regression")
         elif(args.task == "breed_identifying"):
             method_obj = KNN(k=args.K, task_kind="classification")
-            #method_obj = KNN(k=13, task_kind="classification")
         else:
             pass # unsupported task   
     else:
