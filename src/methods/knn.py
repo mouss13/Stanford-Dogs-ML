@@ -30,7 +30,7 @@ class KNN(object):
         self.training_data = training_data
         self.training_labels = training_labels
         pred_labels = training_labels
-
+        
         #just return training labels, as KNN does not train
         return pred_labels
 
@@ -49,15 +49,15 @@ class KNN(object):
             distances = np.linalg.norm(test_point - self.training_data, axis=1)  
             #indides of the k smallest distances  
             k_indices = np.argsort(distances)[:self.k]
-
+            
             if self.task_kind == "classification":
                 labels, counts = np.unique(self.training_labels[k_indices], return_counts=True)
                 test_labels.append(labels[np.argmax(counts)])
-                
+            
             elif self.task_kind == "regression":
                 mean_values = np.mean(self.training_labels[k_indices], axis=0)
                 test_labels.append(mean_values)
             else:
                 pass
-
+            
         return np.array(test_labels)

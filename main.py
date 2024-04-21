@@ -431,7 +431,7 @@ if __name__ == '__main__':
     # which can be accessed as "args.data", for example.
     args = parser.parse_args()
     
-    # If no K is specified, use the optimal value for K as default (depends on the task)
+    # If no K is specified, use the optimal value for K as default, depending on the task
     if args.method == "knn" and args.K == 1:
         args.K = get_default_opt_k(args.task)
         print("\n[Using default value of K = {} for {} task...]\n".format(args.K, args.task))
